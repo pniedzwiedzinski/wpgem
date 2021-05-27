@@ -1,0 +1,56 @@
+#!/usr/bin/env nix-shell
+#!nix-shell -i sh -p curl jq busybox nur.repos.pn.html2gmi
+##!/bin/sh
+## Usage:
+## $ wpgem https://wordpress-site.org
+
+VERSION="0.1"
+
+usage() {
+  echo "wpgem v$VERSION"
+  echo "Usage:"
+  echo "\twpgem URL [OUTPUT_DIR]"
+  echo "Default OUTPUT_DIR=out"
+}
+
+URL=$1
+[ -z $URL ] && usage && exit 2
+
+OUT=$2
+[ -z $OUT ] && OUT=out
+
+[ -d $OUT ] && echo "Directory $OUT exists"
+mkdir -p $OUT/.cache $OUT/data
+rm $OUT/.cache/cur_index
+
+B=0
+page=1
+while [ "$B" != "1" ]; do
+  curl "$URL/wp-json/wp/v2/posts?per_page=25&page=$page" > $OUT/.cache/$page
+  [ `tail -n1 $OUT/.cache/$page | cut -c 1` != "[" ] && break
+
+  for post_id in `cat $OUT/.cache/$page | jq '.[].id'`; do
+    [ -f $OUT/data/$post_id ] && B=1 && break
+    cat $OUT/.cache/$page | jq -r ".[] | select(.id==$post_id) | { slug: .slug, link: .link, content: .content, title: .title }" > $OUT/data/$post_id
+
+    link=`cat $OUT/data/$post_id | jq -r '.link'`
+    title=`cat $OUT/data/$post_id | jq -r '.title.rendered'`
+    rel=/`echo $link | cut -d'/' -f 4- | rev | cut -c 2- | rev`
+
+    echo "=> .$rel.gmi $title" >> $OUT/.cache/cur_index
+
+    mkdir -p  $OUT/site/$(dirname $rel)
+    echo "# $title" > $OUT/site/$rel.gmi
+    cat $OUT/data/$post_id | jq -r '.content | .rendered' | html2gmi >> $OUT/site/$rel.gmi
+    printf "\n------\nArtykuł pochodzi z portalu $URL\n" >> $OUT/site/$rel.gmi
+    echo "=> $link Oryginalny artykuł" >> $OUT/site/$rel.gmi
+  done
+  page=$(($page+1))
+done
+
+cat $OUT/.cache/cur_index > $OUT/.cache/new_index
+cat $OUT/data/index.idx >> $OUT/.cache/new_index
+cp $OUT/.cache/new_index $OUT/data/index.idx
+
+printf "# $URL\n\n" > $OUT/site/index.gmi
+cat $OUT/data/index.idx >> $OUT/site/index.gmi
