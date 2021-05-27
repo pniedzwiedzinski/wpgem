@@ -35,9 +35,9 @@ while [ "$B" != "1" ]; do
 
     link=`cat $OUT/data/$post_id | jq -r '.link'`
     title=`cat $OUT/data/$post_id | jq -r '.title.rendered'`
-    rel=/`echo $link | cut -d'/' -f 4- | rev | cut -c 2- | rev`
+    rel=`echo $link | cut -d'/' -f 4- | rev | cut -c 2- | rev`
 
-    echo "=> .$rel.gmi $title" >> $OUT/.cache/cur_index
+    echo "=> $rel.gmi $title" >> $OUT/.cache/cur_index
 
     mkdir -p  $OUT/site/$(dirname $rel)
     echo "# $title" > $OUT/site/$rel.gmi
