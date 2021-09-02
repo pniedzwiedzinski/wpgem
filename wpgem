@@ -41,7 +41,7 @@ while [ "$B" != "1" ]; do
 
     mkdir -p  $OUT/site/$(dirname $rel)
     echo "# $title" > $OUT/site/$rel.gmi
-    cat $OUT/data/$post_id | jq -r '.content | .rendered' | html2gmi >> $OUT/site/$rel.gmi
+    cat $OUT/data/$post_id | jq -r '.content | .rendered' | html2gmi -e >> $OUT/site/$rel.gmi
     printf "\n------\nArtykuł pochodzi z portalu $URL\n" >> $OUT/site/$rel.gmi
     echo "=> $link Oryginalny artykuł" >> $OUT/site/$rel.gmi
   done
